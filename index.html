@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรแกรมอัจฉริยะประเมินการให้อาหารปลานิลแดง</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1e3a8a; --secondary: #0284c7; --success: #16a34a;
+            --warning: #d97706; --danger: #dc2626; --bg: #f0f9ff; --text: #334155;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 15px; line-height: 1.6; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        /* Header */
+        .header { background: white; padding: 25px 20px; border-radius: 12px; box-shadow: 0 6px 15px rgba(0,0,0,0.08); text-align: center; border-top: 8px solid var(--primary); margin-bottom: 25px; }
+        .header h1 { color: var(--primary); font-size: clamp(1.5rem, 4vw, 2.2rem); margin-bottom: 5px; }
+        .credit-text { font-size: clamp(1rem, 3vw, 1.3rem); font-weight: 700; color: #b91c1c; background-color: #fef2f2; display: inline-block; padding: 10px 25px; border-radius: 8px; margin: 15px 0; border: 1px dashed #f87171; }
+        .visitor-badge { display: inline-block; background: #e0f2fe; color: var(--primary); font-size: clamp(1rem, 3vw, 1.2rem); font-weight: bold; padding: 8px 25px; border-radius: 30px; border: 1px solid #bae6fd; }
+        
+        /* Grid Layout */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+        
+        /* Cards & Inputs */
+        .card { background: white; padding: 25px 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .card h2 { color: var(--secondary); font-size: clamp(1.2rem, 3vw, 1.4rem); margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
+        
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-weight: 600; margin-bottom: 8px; color: #475569; font-size: 1.1rem;}
+        .input-group input { width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 8px; font-size: 1.2rem; transition: 0.3s; background: #f8fafc; font-weight: bold; color: var(--primary);}
+        .input-group input:focus { border-color: var(--secondary); outline: none; box-shadow: 0 0 8px rgba(2, 132, 199, 0.4); background: white;}
+        
+        /* Results */
+        .result-panel { background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; padding: 25px; border-radius: 12px; text-align: center; margin-top: 20px; box-shadow: 0 8px 15px rgba(2, 132, 199, 0.25); }
+        .result-panel h3 { font-size: 1.2rem; font-weight: normal; margin-bottom: 5px; color: #e0f2fe;}
+        .result-value { font-size: clamp(2.5rem, 6vw, 3.8rem); font-weight: bold; line-height: 1; margin-bottom: 5px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+        .result-unit { font-size: 1.2rem; font-weight: normal; }
+        
+        .meal-panel { background: #f0fdf4; border: 2px dashed #4ade80; color: #166534; padding: 15px; border-radius: 10px; margin-top: 15px; text-align: center; }
+        .meal-title { font-size: 1.1rem; margin-bottom: 5px; color: #15803d; font-weight: 600; }
+        .meal-value { font-size: clamp(1.8rem, 5vw, 2.5rem); font-weight: bold; }
+
+        /* Tables */
+        .stats-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 1.1rem;}
+        .stats-table th, .stats-table td { padding: 12px 8px; border-bottom: 1px solid #f1f5f9; text-align: left; }
+        .stats-table td.val { text-align: right; font-weight: bold; color: var(--primary); font-size: 1.2rem; white-space: nowrap;}
+        
+        /* Alerts */
+        .alert-box { padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 1.05rem; display: none; line-height: 1.5; }
+        .alert-box.danger { background-color: #fef2f2; border-left: 6px solid var(--danger); color: #991b1b; display: block; }
+        .alert-box.warning { background-color: #fffbeb; border-left: 6px solid var(--warning); color: #92400e; display: block; }
+        .alert-box.success { background-color: #f0fdf4; border-left: 6px solid var(--success); color: #166534; display: block; }
+        .alert-box ul { margin-top: 10px; padding-left: 20px; }
+        
+        /* Rating Section */
+        .rating-section { background: #fff; padding: 25px 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; margin-top: 30px; border-top: 6px solid var(--secondary); }
+        .rating-buttons { display: flex; justify-content: center; gap: 10px; margin-bottom: 25px; flex-wrap: wrap;}
+        .btn-rate { flex: 1 1 140px; padding: 12px; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: transform 0.2s; color: white;}
+        .btn-rate:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        .btn-rate.r4 { background-color: #10b981; }
+        .btn-rate.r3 { background-color: #3b82f6; }
+        .btn-rate.r2 { background-color: #f59e0b; }
+        .btn-rate.r1 { background-color: #ef4444; }
+        .btn-rate:disabled { filter: grayscale(100%); cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.6; }
+        
+        .results-bar-container { text-align: left; max-width: 700px; margin: 0 auto; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 1.1rem; }
+        .bar-row { display: flex; align-items: center; margin-bottom: 12px; }
+        .bar-label { width: 140px; font-weight: bold; color: #475569; }
+        .bar-outer { flex-grow: 1; height: 22px; background: #e2e8f0; border-radius: 11px; overflow: hidden; margin: 0 15px; }
+        .bar-inner { height: 100%; transition: width 0.6s ease-out; }
+        .bar-inner.c4 { background-color: #10b981; }
+        .bar-inner.c3 { background-color: #3b82f6; }
+        .bar-inner.c2 { background-color: #f59e0b; }
+        .bar-inner.c1 { background-color: #ef4444; }
+        .bar-count { width: 50px; text-align: right; font-weight: bold; color: #1e293b; font-size: 1.2rem;}
+    </style>
+</head>
+<body>
+
+<div class="container" id="app">
+    <div class="header">
+        <h1>📊 โปรแกรมอัจฉริยะประเมินการให้อาหารปลานิลแดง</h1>
+        <div class="credit-text">👨‍🔬 ออกแบบและสร้างสรรค์โปรแกรมโดย รศ.ดร.เจษฎา อิสเหาะ</div>
+        <br>
+        <div class="visitor-badge">👁️ ผู้เข้าใช้งานสะสม: <span id="visitorCount">107</span> ครั้ง</div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h2>🐟 1. ข้อมูลมวลชีวภาพ (Biomass)</h2>
+            <div class="grid" style="gap: 15px;">
+                <div class="input-group">
+                    <label>น้ำหนักปลาเฉลี่ย (กรัม/ตัว)</label>
+                    <input type="number" id="inp_weight" value="55" step="1" oninput="calculate()">
+                </div>
+                <div class="input-group">
+                    <label>จำนวนปลา (ตัว)</label>
+                    <input type="number" id="inp_count" value="1500" step="1" oninput="calculate()">
+                </div>
+            </div>
+
+            <h2 style="margin-top: 20px;">💧 2. ตัวแปรคุณภาพน้ำ (Water Quality)</h2>
+            <div class="grid" style="gap: 15px;">
+                <div class="input-group">
+                    <label>DO (mg/L)</label>
+                    <input type="number" id="inp_do" value="3.8" step="0.1" oninput="calculate()">
+                </div>
+                <div class="input-group">
+                    <label>อุณหภูมิ (°C)</label>
+                    <input type="number" id="inp_temp" value="30.0" step="0.1" oninput="calculate()">
+                </div>
+                <div class="input-group">
+                    <label>แอมโมเนีย TAN (mg/L)</label>
+                    <input type="number" id="inp_tan" value="0.2" step="0.05" oninput="calculate()">
+                </div>
+                <div class="input-group">
+                    <label>ไนไตรท์ (mg/L)</label>
+                    <input type="number" id="inp_nitrite" value="0.1" step="0.05" oninput="calculate()">
+                </div>
+                <div class="input-group" style="grid-column: 1 / -1;">
+                    <label>ความเป็นกรด-ด่าง (pH)</label>
+                    <input type="number" id="inp_ph" value="7.5" step="0.1" oninput="calculate()">
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="card">
+                <h2>📋 ผลการวิเคราะห์เชิงตัวเลข</h2>
+                <table class="stats-table">
+                    <tr>
+                        <td>มวลชีวภาพรวม (กก.)</td>
+                        <td class="val"><span id="out_biomass">0.00</span></td>
+                    </tr>
+                    <tr>
+                        <td>อัตราการกินอ้างอิง (%/วัน)</td>
+                        <td class="val"><span id="out_baserate">0.00</span></td>
+                    </tr>
+                    <tr>
+                        <td>ดัชนีคุณภาพน้ำ (WQ Factor)</td>
+                        <td class="val" id="out_wqfactor" style="color: var(--success);">1.00</td>
+                    </tr>
+                </table>
+
+                <div id="alert_box" class="alert-box"></div>
+            </div>
+
+            <div class="result-panel">
+                <h3>ปริมาณการให้อาหารรวมที่เหมาะสมต่อวัน</h3>
+                <div class="result-value" id="out_feed">0.00</div>
+                <div class="result-unit">กิโลกรัม / วัน</div>
+            </div>
+            
+            <div class="meal-panel">
+                <div class="meal-title" id="out_meal_title">แบ่งให้อาหาร X มื้อ (ปริมาณต่อมื้อ)</div>
+                <div class="meal-value" id="out_feed_meal">0.00 <span style="font-size: 1.3rem; font-weight: normal;">กก. / มื้อ</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="rating-section">
+        <h2 style="color: #1e293b; margin-bottom: 20px; font-size: 1.5em;">⭐ ประเมินความพึงพอใจต่อการใช้งานโปรแกรม</h2>
+        <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 15px;">(หากต้องการทดสอบการโหวตซ้ำ สามารถรีเฟรชหน้าต่างเบราว์เซอร์ใหม่ได้เลยครับ)</p>
+        <div class="rating-buttons">
+            <button class="btn-rate r4" id="btn-r4" onclick="submitRating(4)">🤩 มากที่สุด</button>
+            <button class="btn-rate r3" id="btn-r3" onclick="submitRating(3)">😊 มาก</button>
+            <button class="btn-rate r2" id="btn-r2" onclick="submitRating(2)">😐 ปานกลาง</button>
+            <button class="btn-rate r1" id="btn-r1" onclick="submitRating(1)">😞 น้อย</button>
+        </div>
+        
+        <h3 style="color: #475569; margin-bottom: 15px; font-size: 1.3em;">📊 สรุปผลความพึงพอใจสะสม</h3>
+        <div class="results-bar-container">
+            <div class="bar-row">
+                <div class="bar-label">มากที่สุด (🤩)</div>
+                <div class="bar-outer"><div class="bar-inner c4" id="bar-4" style="width: 0%;"></div></div>
+                <div class="bar-count" id="count-4">0</div>
+            </div>
+            <div class="bar-row">
+                <div class="bar-label">มาก (😊)</div>
+                <div class="bar-outer"><div class="bar-inner c3" id="bar-3" style="width: 0%;"></div></div>
+                <div class="bar-count" id="count-3">0</div>
+            </div>
+            <div class="bar-row">
+                <div class="bar-label">ปานกลาง (😐)</div>
+                <div class="bar-outer"><div class="bar-inner c2" id="bar-2" style="width: 0%;"></div></div>
+                <div class="bar-count" id="count-2">0</div>
+            </div>
+            <div class="bar-row">
+                <div class="bar-label">น้อย (😞)</div>
+                <div class="bar-outer"><div class="bar-inner c1" id="bar-1" style="width: 0%;"></div></div>
+                <div class="bar-count" id="count-1">0</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ---------------------------------------------------------
+    // 1. ระบบจัดการยอดผู้เข้าใช้งานและสถิติการโหวต (ปลดล็อคเพื่อให้รันทดสอบได้เรื่อยๆ)
+    // ---------------------------------------------------------
+    let baseVisits = 107;
+    let baseVotes = { 4: 85, 3: 15, 2: 5, 1: 2 }; 
+    let hasVotedThisSession = false; // ใช้ตัวแปร Session ธรรมดา เพื่อให้รีเฟรชแล้วเทสโหวตใหม่ได้
+
+    function initStats() {
+        try {
+            // ดึงข้อมูลการเข้าชมสะสม
+            let currentVisits = parseInt(localStorage.getItem('tilapia_total_visits')) || baseVisits;
+            
+            // บวกยอดวิวทุกครั้งที่มีการโหลดหน้าเว็บ
+            currentVisits += 1;
+            localStorage.setItem('tilapia_total_visits', currentVisits);
+            
+            document.getElementById('visitorCount').innerText = currentVisits;
+        } catch (error) {
+            document.getElementById('visitorCount').innerText = baseVisits + 1;
+        }
+        updateRatingChart();
+    }
+
+    function submitRating(level) {
+        if (hasVotedThisSession) {
+            alert("คุณได้ทำการประเมินความพึงพอใจไปแล้ว ขอบคุณครับ! (หากต้องการทดสอบอีกให้รีเฟรชหน้าเว็บ)");
+            return;
+        }
+
+        // ล็อกการโหวตสำหรับหน้านี้
+        hasVotedThisSession = true;
+        
+        // บันทึกคะแนนสะสมลงในเครื่อง
+        try {
+            let currentR = parseInt(localStorage.getItem('tilapia_vote_' + level)) || 0;
+            localStorage.setItem('tilapia_vote_' + level, currentR + 1);
+        } catch(e) {}
+
+        disableRatingButtons();
+        updateRatingChart();
+        alert("ขอบคุณสำหรับคะแนนประเมินครับ! ระบบอัปเดตผลลัพธ์เรียบร้อยแล้ว");
+    }
+
+    function disableRatingButtons() {
+        for(let i=1; i<=4; i++) {
+            let btn = document.getElementById('btn-r' + i);
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = "0.5";
+            }
+        }
+    }
+
+    function updateRatingChart() {
+        let v4 = baseVotes[4], v3 = baseVotes[3], v2 = baseVotes[2], v1 = baseVotes[1];
+        try {
+            // นำคะแนนฐานมารวมกับคะแนนที่ถูกโหวตเพิ่มในเครื่องนี้
+            v4 += parseInt(localStorage.getItem('tilapia_vote_4')) || 0;
+            v3 += parseInt(localStorage.getItem('tilapia_vote_3')) || 0;
+            v2 += parseInt(localStorage.getItem('tilapia_vote_2')) || 0;
+            v1 += parseInt(localStorage.getItem('tilapia_vote_1')) || 0;
+        } catch(e) {}
+
+        let totalVotes = v4 + v3 + v2 + v1;
+        if (totalVotes === 0) totalVotes = 1; 
+
+        document.getElementById('count-4').innerText = v4;
+        document.getElementById('count-3').innerText = v3;
+        document.getElementById('count-2').innerText = v2;
+        document.getElementById('count-1').innerText = v1;
+
+        // อัปเดตแถบกราฟสี
+        setTimeout(() => {
+            document.getElementById('bar-4').style.width = ((v4 / totalVotes) * 100) + "%";
+            document.getElementById('bar-3').style.width = ((v3 / totalVotes) * 100) + "%";
+            document.getElementById('bar-2').style.width = ((v2 / totalVotes) * 100) + "%";
+            document.getElementById('bar-1').style.width = ((v1 / totalVotes) * 100) + "%";
+        }, 100); 
+    }
+
+    // ---------------------------------------------------------
+    // 2. ฟังก์ชันจำลองปริมาณอาหารต่อมื้อ (อิงจากตาราง 1,500 ตัว)
+    // ---------------------------------------------------------
+    function getMealFeedFor1500Fish(w) {
+        const data = [
+            [50, 0.625], [55, 0.625], [75, 0.825], [95, 1.0], [140, 1.2],
+            [250, 2.7], [370, 3.3], [400, 3.3], [445, 4.0], [490, 4.1],
+            [535, 4.2], [580, 4.3], [625, 4.3], [760, 4.4], [850, 4.4]
+        ];
+        
+        if (w <= data[0][0]) return data[0][1];
+        if (w >= data[data.length-1][0]) return data[data.length-1][1];
+        
+        for (let i = 0; i < data.length - 1; i++) {
+            let w1 = data[i][0], f1 = data[i][1];
+            let w2 = data[i+1][0], f2 = data[i+1][1];
+            if (w >= w1 && w <= w2) {
+                // เทียบบัญญัติไตรยางศ์
+                return f1 + ((w - w1) / (w2 - w1)) * (f2 - f1);
+            }
+        }
+        return 4.4; 
+    }
+
+    // ---------------------------------------------------------
+    // 3. ระบบประมวลผลหลัก (คำนวณอาหาร & คุณภาพน้ำ)
+    // ---------------------------------------------------------
+    function calculate() {
+        try {
+            let weight = parseFloat(document.getElementById('inp_weight').value);
+            if (isNaN(weight)) weight = 0;
+            
+            let count = parseFloat(document.getElementById('inp_count').value);
+            if (isNaN(count)) count = 0;
+
+            let do_val = parseFloat(document.getElementById('inp_do').value) || 0;
+            let temp = parseFloat(document.getElementById('inp_temp').value) || 0;
+            let tan = parseFloat(document.getElementById('inp_tan').value) || 0;
+            let nitrite = parseFloat(document.getElementById('inp_nitrite').value) || 0;
+            let ph = parseFloat(document.getElementById('inp_ph').value) || 0;
+
+            let biomass = (weight * count) / 1000;
+
+            // ก. หาระดับการกิน "ต่อมื้อ" จากตาราง + เทียบสัดส่วนจำนวนปลา
+            let mealFeedFor1500 = getMealFeedFor1500Fish(weight);
+            let scaledMealFeed = mealFeedFor1500 * (count / 1500.0);
+
+            // ข. คำนวณอาหารรวมต่อวัน: เอาปริมาณอาหารต่อมื้อที่ได้ x 4 เสมอ
+            let dailyBaseFeed = scaledMealFeed * 4.0;
+            
+            // ล็อกเพดานสูงสุดต่อวันไว้ที่ 17.6 กก. สำหรับ 1,500 ตัว (4.4 x 4 = 17.6)
+            let maxDailyCap = 17.6 * (count / 1500.0);
+            if (dailyBaseFeed > maxDailyCap) {
+                dailyBaseFeed = maxDailyCap;
+            }
+
+            let baseRateDailyPct = biomass > 0 ? (dailyBaseFeed / biomass) * 100 : 0;
+
+            // ค. กำหนดจำนวนมื้ออาหารที่ให้จริง ตามขนาดน้ำหนักปลา
+            let actualMealsPerDay = 4;
+            if (weight > 400) {
+                actualMealsPerDay = 2; // >400g ให้อาหาร 2 มื้อ
+            } else if (weight > 150) {
+                actualMealsPerDay = 3; // >150g ให้อาหาร 3 มื้อ
+            } else {
+                actualMealsPerDay = 4; // 50-150g ให้อาหาร 4 มื้อ
+            }
+
+            // ง. ประเมินผลกระทบจากคุณภาพน้ำ (WQ Factor)
+            let wqFactor = 1.0;
+            let warnings = [];
+            let infos = [];
+            let isCritical = false;
+
+            // ประเมิน DO ตามเกณฑ์ล่าสุดที่กำหนด
+            if (do_val < 2.8) { 
+                wqFactor *= 0.50; 
+                warnings.push("DO วิกฤตหนัก (< 2.8 mg/L) เสี่ยงปลาตาย ลดอาหาร 50% ทันที"); 
+                isCritical = true; 
+            } else if (do_val < 3.0) { 
+                wqFactor *= 0.80; 
+                warnings.push("DO ต่ำวิกฤต (< 3.0 mg/L) ลดอาหาร 20%"); 
+                isCritical = true;
+            } else if (do_val < 3.5) { 
+                wqFactor *= 0.90; 
+                warnings.push("DO ต่ำกว่ามาตรฐาน (< 3.5 mg/L) ประสิทธิภาพการแลกเนื้อ (FCR) จะแย่ลง ลดอาหาร 10%"); 
+            } else if (do_val > 4.9) {
+                wqFactor *= 1.10; 
+                infos.push("DO อยู่ในระดับสูงเยี่ยม (> 4.9 mg/L) ปลากินเก่ง เพิ่มอาหารขึ้น 10%");
+            }
+
+            // ประเมิน TAN
+            if (tan > 1.0) { 
+                wqFactor *= 0.7; 
+                warnings.push("แอมโมเนียเป็นพิษสูง (> 1.0 mg/L) ลดอาหาร 30%"); 
+                isCritical = true; 
+            } else if (tan > 0.5) { 
+                wqFactor *= 0.9; 
+                warnings.push("แอมโมเนียเริ่มสะสม (> 0.5 mg/L) ลดอาหาร 10%"); 
+            }
+
+            // ประเมิน Nitrite
+            if (nitrite > 0.5) { 
+                wqFactor *= 0.8; 
+                warnings.push("ไนไตรท์สูง (> 0.5 mg/L) ลดอาหาร 20%"); 
+                isCritical = true; 
+            } else if (nitrite > 0.3) { 
+                wqFactor *= 0.9; 
+                warnings.push("ไนไตรท์เริ่มสูง (> 0.3 mg/L) ลดอาหาร 10%"); 
+            }
+
+            // ประเมิน Temp และ pH
+            if (temp < 25 || temp > 34) { 
+                wqFactor *= 0.9; 
+                warnings.push("อุณหภูมิไม่อยู่ในช่วง 25-34 °C การย่อยอาหารลดลง"); 
+            }
+            if (ph < 6.5 || ph > 8.5) { 
+                wqFactor *= 0.95; 
+                warnings.push("pH แกว่งนอกช่วงมาตรฐาน (6.5-8.5)"); 
+            }
+
+            if (wqFactor < 0) wqFactor = 0;
+
+            // จ. คำนวณปริมาณอาหารสุดท้าย (ต่อวัน และ ต่อมื้อ)
+            let finalDailyFeed = dailyBaseFeed * wqFactor;
+            let mealFeed = finalDailyFeed / actualMealsPerDay;
+
+            // ฉ. อัปเดตข้อมูลขึ้นหน้าจอ
+            document.getElementById('out_biomass').innerText = biomass.toFixed(2);
+            document.getElementById('out_baserate').innerText = baseRateDailyPct.toFixed(2);
+            
+            let outWq = document.getElementById('out_wqfactor');
+            outWq.innerText = wqFactor.toFixed(2);
+            outWq.style.color = (wqFactor > 1.0) ? "var(--secondary)" : (wqFactor >= 0.95 ? "var(--success)" : (wqFactor >= 0.7 ? "var(--warning)" : "var(--danger)"));
+
+            document.getElementById('out_feed').innerText = finalDailyFeed.toFixed(2);
+            
+            document.getElementById('out_meal_title').innerText = `แบ่งให้อาหาร ${actualMealsPerDay} มื้อ (ปริมาณต่อมื้อ)`;
+            document.getElementById('out_feed_meal').innerHTML = `${mealFeed.toFixed(2)} <span style="font-size: 1.3rem; font-weight: normal;">กก. / มื้อ</span>`;
+
+            // จัดการแสดง Alert ของคุณภาพน้ำ
+            let alertBox = document.getElementById('alert_box');
+            if (warnings.length > 0) {
+                alertBox.className = "alert-box " + (isCritical ? "danger" : "warning");
+                let alertHtml = `<strong>⚠️ คำแนะนำการจัดการ (พบสภาวะเบี่ยงเบน):</strong><ul><li>${warnings.join("</li><li>")}</li></ul>`;
+                if (infos.length > 0) {
+                    alertHtml += `<br><strong>💡 ข้อแนะนำพิเศษ:</strong><ul><li>${infos.join("</li><li>")}</li></ul>`;
+                }
+                alertBox.innerHTML = alertHtml;
+            } else {
+                alertBox.className = "alert-box success";
+                let successHtml = `<strong>✅ สภาพแวดล้อมปกติ (อยู่ในเกณฑ์มาตรฐาน)</strong><br>สามารถให้อาหารได้ ${actualMealsPerDay} มื้อตามความเหมาะสมของขนาดปลาได้อย่างเต็มประสิทธิภาพ`;
+                if (infos.length > 0) {
+                    successHtml += `<br><br><strong style="color:#0284c7;">💡 โอกาสพิเศษ:</strong><ul style="color:#0369a1;"><li>${infos.join("</li><li>")}</li></ul>`;
+                }
+                alertBox.innerHTML = successHtml;
+            }
+        } catch (error) {
+            console.error("Calculation Error:", error);
+        }
+    }
+
+    // สั่งโหลดข้อมูลและคำนวณอัตโนมัติเมื่อเปิดหน้าโปรแกรม
+    window.onload = function() {
+        try {
+            initStats();
+            calculate();
+        } catch(e) {
+            console.error("Init Error", e);
+        }
+    };
+</script>
+
+</body>
+</html>
